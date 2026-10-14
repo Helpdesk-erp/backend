@@ -1,0 +1,7 @@
+# Todos los archivos de texto con fin de línea LF, en cualquier sistema operativo.
+# Evita que un mismo archivo aparezca modificado solo porque alguien lo guardó en Windows.
+* text=auto eol=lf
+
+# mvnw (Linux y macOS) con LF; los .cmd de Windows necesitan CRLF
+/mvnw text eol=lf
+*.cmd text eol=crlf
