@@ -44,4 +44,19 @@ public class ConocimientoService {
 		return articulos;
 	}
 
+	/**
+	 * Cada artículo junto con el ticket del que salió, para que el auditor
+	 * compruebe que toda solución documentada viene de un caso real. Agregación
+	 * con $lookup: base_conocimiento.ticket_id -> tickets._id.
+	 */
+	public List<Document> articulosConTicket() {
+		List<Document> etapas = List.of(Document.parse("""
+				{ $lookup: { from: "tickets", localField: "ticket_id", foreignField: "_id", as: "ticket" } }
+				"""));
+
+		List<Document> articulos = mongo.getCollection("base_conocimiento").aggregate(etapas).into(new ArrayList<>());
+		articulos.forEach(articulo -> articulo.put("id", articulo.remove("_id")));
+		return articulos;
+	}
+
 }
