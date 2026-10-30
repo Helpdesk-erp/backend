@@ -16,7 +16,12 @@ import com.sistemasintegrados.helpdesk.auth.UsuarioAutenticado;
 import com.sistemasintegrados.helpdesk.clientes.Cliente;
 import com.sistemasintegrados.helpdesk.clientes.ClienteRepository;
 import com.sistemasintegrados.helpdesk.comun.ReglaNegocioException;
+import com.sistemasintegrados.helpdesk.conocimiento.ConocimientoService;
+import com.sistemasintegrados.helpdesk.pagos.PagoService;
+import com.sistemasintegrados.helpdesk.paquetes.PaqueteService;
 import com.sistemasintegrados.helpdesk.reportes.ReportesService;
+import com.sistemasintegrados.helpdesk.tickets.TicketService;
+import com.sistemasintegrados.helpdesk.usuarios.UsuarioService;
 
 /**
  * Arma el contenido del dashboard de cada rol con los reportes de agregación.
@@ -30,10 +35,27 @@ public class DashboardService {
 
 	private final MongoTemplate mongo;
 
-	public DashboardService(ReportesService reportes, ClienteRepository clientes, MongoTemplate mongo) {
+	private final TicketService tickets;
+
+	private final PagoService pagos;
+
+	private final UsuarioService usuarios;
+
+	private final PaqueteService paquetes;
+
+	private final ConocimientoService conocimiento;
+
+	public DashboardService(ReportesService reportes, ClienteRepository clientes, MongoTemplate mongo,
+			TicketService tickets, PagoService pagos, UsuarioService usuarios, PaqueteService paquetes,
+			ConocimientoService conocimiento) {
 		this.reportes = reportes;
 		this.clientes = clientes;
 		this.mongo = mongo;
+		this.tickets = tickets;
+		this.pagos = pagos;
+		this.usuarios = usuarios;
+		this.paquetes = paquetes;
+		this.conocimiento = conocimiento;
 	}
 
 	public Map<String, Object> administrador() {
@@ -46,6 +68,7 @@ public class DashboardService {
 		datos.put("carga_agentes", reportes.cargaPorAgente());
 		datos.put("pagos_rechazados", reportes.pagosRecientes(new Document("estado", "rechazado"), 5));
 		datos.put("proximas_capacitaciones", reportes.proximasCapacitaciones(new Document(), null, 5));
+		datos.put("usuarios", usuarios.listarParaAdministrador());
 		return datos;
 	}
 
@@ -81,6 +104,8 @@ public class DashboardService {
 				new Document("cliente_id", cliente.id()), new Document("fecha_creacion", -1), 8));
 		datos.put("capacitaciones", reportes.proximasCapacitaciones(filtroCapacitaciones, usuario.id(), 6));
 		datos.put("pagos_recientes", reportes.pagosRecientes(new Document("cliente_id", cliente.id()), 6));
+		datos.put("por_confirmar", tickets.pendientesDeConfirmar(cliente.id()));
+		datos.put("catalogo_paquetes", paquetes.catalogoPorPrecio());
 		return datos;
 	}
 
@@ -92,6 +117,8 @@ public class DashboardService {
 		datos.put("ingresos_por_paquete", reportes.ingresosPorPaquete());
 		datos.put("asistencia_capacitaciones", reportes.asistenciaPorCapacitacion());
 		datos.put("actividad_reciente", reportes.actividadReciente(12));
+		datos.put("recaudo_por_metodo", pagos.recaudoPorMetodo());
+		datos.put("trazabilidad_conocimiento", conocimiento.articulosConTicket());
 		return datos;
 	}
 
