@@ -1,18 +1,14 @@
 package com.sistemasintegrados.helpdesk.clientes;
 
 import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sistemasintegrados.helpdesk.comun.ContadorService;
-import com.sistemasintegrados.helpdesk.comun.ReglaNegocioException;
 import com.sistemasintegrados.helpdesk.usuarios.Usuario;
 
 @Service
@@ -41,20 +37,7 @@ public class RegistroClienteService {
 		String representante = datos.representante() == null || datos.representante().isBlank() ? null
 				: datos.representante().trim();
 
-		// Mismas reglas del anyOf de clientes en 01_esquema.js
-		Map<String, String> errores = new LinkedHashMap<>();
-		if (personaNatural && "NIT".equals(datos.tipoDocumento())) {
-			errores.put("tipo_documento", "Una persona natural se registra con CC o CE");
-		}
-		if (!personaNatural && !"NIT".equals(datos.tipoDocumento())) {
-			errores.put("tipo_documento", "Una empresa o persona jurídica se registra con NIT");
-		}
-		if (!personaNatural && representante == null) {
-			errores.put("representante", "Escriba el nombre del propietario o representante legal");
-		}
-		if (!errores.isEmpty()) {
-			throw new ReglaNegocioException(HttpStatus.BAD_REQUEST, "Revise los datos del formulario", errores);
-		}
+		ReglasCliente.validar(datos.tipoCliente(), datos.tipoDocumento(), representante);
 
 		Instant ahora = Instant.now();
 		String correo = datos.correo().trim().toLowerCase();

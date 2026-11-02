@@ -119,6 +119,16 @@ public class AuthService {
 				Update.update("estado", "cerrada").set("fecha_cierre", Instant.now()), "sesiones");
 	}
 
+	/**
+	 * Cierra todas las sesiones activas de un usuario. Se usa al bloquearlo,
+	 * inactivarlo o cambiarle el rol: el token que tenga deja de servir de inmediato.
+	 */
+	public void cerrarSesionesDe(String usuarioId) {
+		mongo.updateMulti(
+				query(where("usuario_id").is(usuarioId).and("estado").is("activa")),
+				Update.update("estado", "cerrada").set("fecha_cierre", Instant.now()), "sesiones");
+	}
+
 	public UsuarioActual usuarioActual(UsuarioAutenticado autenticado) {
 		Usuario usuario = usuarios.findById(autenticado.id())
 			.orElseThrow(() -> new ReglaNegocioException(HttpStatus.NOT_FOUND, "El usuario ya no existe"));

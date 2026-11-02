@@ -156,7 +156,7 @@ public class ReportesService {
 				  { $lookup: { from: "clientes", localField: "cliente_id", foreignField: "_id", as: "cliente",
 				      pipeline: [ { $project: { nombre: 1 } } ] } },
 				  { $project: {
-				      _id: 0, id: "$_id", cliente: { $first: "$cliente.nombre" }, paquete_id: 1, periodo: 1, valor: 1,
+				      _id: 0, id: "$_id", cliente_id: 1, cliente: { $first: "$cliente.nombre" }, paquete_id: 1, periodo: 1, valor: 1,
 				      metodo: 1, estado: 1, motivo_rechazo: 1, fecha: 1
 				  } }
 				]

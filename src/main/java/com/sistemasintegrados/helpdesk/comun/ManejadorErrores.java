@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -94,6 +95,22 @@ public class ManejadorErrores {
 	@ExceptionHandler(AccessDeniedException.class)
 	ResponseEntity<ErrorApi> sinPermiso(AccessDeniedException e) {
 		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorApi.de("No tiene permiso para esta operación"));
+	}
+
+	/**
+	 * Lo demás. Las excepciones propias de Spring MVC (ruta inexistente, método
+	 * no permitido, parámetro faltante) conservan su código; el resto es un 500.
+	 */
+	@ExceptionHandler(Exception.class)
+	ResponseEntity<ErrorApi> inesperado(Exception e) {
+		if (e instanceof ErrorResponse respuesta) {
+			String detalle = respuesta.getBody().getDetail();
+			return ResponseEntity.status(respuesta.getStatusCode())
+				.body(ErrorApi.de(detalle != null ? detalle : "La petición no es válida"));
+		}
+		log.error("Error inesperado", e);
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+			.body(ErrorApi.de("Ocurrió un error inesperado. Intente de nuevo"));
 	}
 
 	/** tipoCliente -> tipo_cliente, direccion.ciudad queda igual. */

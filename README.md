@@ -74,12 +74,18 @@ Los paquetes van por funcionalidad, para que cada integrante pueda trabajar en u
 | Paquete | Contenido |
 |---|---|
 | `config` | Conexión a MongoDB, transacciones, seguridad, JWT y CORS |
-| `comun` | Generador de códigos (`ContadorService`), manejo global de errores |
+| `comun` | Generador de códigos (`ContadorService`), contraseña temporal, manejo global de errores |
 | `auth` | Login, registro, cierre de sesión y la validación de la sesión en cada petición |
-| `clientes`, `usuarios`, `roles`, `paquetes` | Documentos de MongoDB y sus repositorios |
+| `usuarios` | Cuentas de acceso: crear la de un empleado, cambiar correo, rol y estado, marcar credenciales enviadas |
+| `empleados` | Registro, edición y retiro de empleados |
+| `clientes` | Registro por el administrador, contacto, contratación de paquetes, inactivación |
+| `tickets` | Ciclo completo del ticket: crear, editar, eliminar, asignar, atender, resolver y cerrar |
+| `conocimiento` | Búsqueda de texto y artículos nuevos a partir de tickets resueltos |
+| `pagos` | Pagos aprobados y rechazados con la transacción que suspende o reactiva el paquete |
+| `capacitaciones` | Programación, inscripción y registro de asistencia |
+| `roles`, `paquetes` | Permisos por rol y catálogo de paquetes con su formulario de ticket |
 | `reportes` | Pipelines del Framework de Agregación |
 | `dashboard` | Un endpoint por rol que arma su dashboard con los reportes |
-| `conocimiento` | Búsqueda de texto en la base de conocimiento |
 
 ## Cómo funciona
 
@@ -122,9 +128,49 @@ En Java los campos van en camelCase (`clienteId`) y MongoDB los guarda en snake_
 | GET | `/api/dashboard/cliente` | Rol cliente | Datos del dashboard |
 | GET | `/api/dashboard/auditor` | Rol auditor | Datos del dashboard |
 | GET | `/api/conocimiento/buscar?q=&paquete=` | Permiso `conocimiento:buscar` | Búsqueda de texto en la base de conocimiento |
-| GET | `/api/paquetes` y `/api/paquetes/{id}` | Con sesión | Paquetes con los campos que pide el formulario de cada uno |
+| POST | `/api/conocimiento` | `conocimiento:crear` | RF-31. Artículo a partir de un ticket resuelto por el mismo agente |
+| GET | `/api/paquetes` y `/api/paquetes/{id}` | Con sesión | Paquetes con los campos que pide el formulario de cada uno (RF-19) |
+| GET | `/api/usuarios` | `usuarios:gestionar` | Cuentas con su vínculo y si ya se enviaron las credenciales |
+| GET | `/api/usuarios/agentes` | `tickets:asignar` o `capacitaciones:gestionar` | Agentes activos con su carga |
+| POST | `/api/usuarios` | `usuarios:gestionar` | RF-06. Cuenta de un empleado con rol interno y contraseña temporal |
+| PUT | `/api/usuarios/{id}` | `usuarios:gestionar` | RF-07. Correo y rol; si cambia el rol se cierran sus sesiones |
+| PATCH | `/api/usuarios/{id}/estado` | `usuarios:gestionar` | RF-08. Activo, inactivo o bloqueado |
+| PATCH | `/api/usuarios/{id}/credenciales-enviadas` | `usuarios:gestionar` | RF-10 |
+| GET | `/api/empleados` y `/api/empleados/{id}` | `empleados:gestionar` | Empleados con su cuenta |
+| POST | `/api/empleados` | `empleados:gestionar` | RF-15 |
+| PUT | `/api/empleados/{id}` | `empleados:gestionar` | RF-16 |
+| POST | `/api/empleados/{id}/retiro` | `empleados:gestionar` | RF-17. Estado retirado y cuenta inactiva, en una transacción |
+| GET | `/api/clientes` | `clientes:gestionar` o `clientes:ver` | Clientes con el estado de cada paquete |
+| GET | `/api/clientes/{id}` | `clientes:gestionar` o `clientes:ver` | RF-13. Cliente, cuentas, tickets y pagos |
+| GET | `/api/clientes/mio` | Rol cliente | RF-13 desde el lado del cliente |
+| POST | `/api/clientes` | `clientes:gestionar` | RF-11. Cliente y cuenta en una transacción, con contraseña temporal |
+| PUT | `/api/clientes/{id}` | `clientes:gestionar` | RF-12. Contacto y dirección |
+| DELETE | `/api/clientes/{id}` | `clientes:gestionar` | RF-14. Eliminación lógica: cliente y cuentas inactivos |
+| POST | `/api/clientes/{id}/reactivacion` | `clientes:gestionar` | Deshace RF-14 |
+| POST | `/api/clientes/{id}/paquetes` | `clientes:gestionar` | Contrata un paquete del catálogo |
+| GET | `/api/tickets?estado=&paquete=` | Ver tickets | RF-21. El cliente ve los suyos, el agente los asignados, los demás todos |
+| GET | `/api/tickets/{id}` | Ver tickets | Detalle con historial, cliente, agente y artículo |
+| POST | `/api/tickets` | `tickets:crear` | RF-20. Solo sobre paquetes activos; `detalle` se valida con `campos_ticket` |
+| PUT | `/api/tickets/{id}` | `tickets:crear` | RF-22. Mientras siga sin atender |
+| DELETE | `/api/tickets/{id}` | `tickets:crear` | RF-23. Mientras no tenga agente |
+| POST | `/api/tickets/{id}/asignacion` | `tickets:asignar` | RF-24. Asigna o reasigna y lo deja en el historial |
+| POST | `/api/tickets/{id}/estado` | `tickets:cambiar_estado` | RF-25. En proceso o resuelto (con solución) |
+| PUT | `/api/tickets/{id}/solucion` | `tickets:cambiar_estado` | RF-26 |
+| POST | `/api/tickets/{id}/cierre` | Rol cliente | RF-28. Confirma la solución y cierra |
+| GET | `/api/pagos?cliente_id=&estado=` | `pagos:registrar` o `pagos:ver` | Historial de pagos |
+| POST | `/api/pagos` | `pagos:registrar` | RF-34 y RF-35. Un rechazo suspende el paquete; un aprobado lo reactiva |
+| GET | `/api/capacitaciones` | Gestionar, dictar o inscribirse | Las del rol: todas, las que dicta o las disponibles |
+| GET | `/api/capacitaciones/{id}` | `capacitaciones:gestionar` o `:dictar` | Con la lista de inscritos |
+| POST | `/api/capacitaciones` | `capacitaciones:gestionar` | RF-38 |
+| POST | `/api/capacitaciones/{id}/cancelacion` | `capacitaciones:gestionar` | Cancela una programada o en curso |
+| POST y DELETE | `/api/capacitaciones/{id}/inscripcion` | `capacitaciones:inscribirse` | RF-39. Inscribirse o cancelar la inscripción |
+| PUT | `/api/capacitaciones/{id}/asistencia` | `capacitaciones:dictar` | RF-40. Solo el instructor; solo califica quien asistió |
 
 Los errores llegan como `{ "mensaje": "...", "errores": { "campo": "..." } }`.
+
+### Contraseñas temporales
+
+Las cuentas que crea el administrador (RF-06 y RF-11) reciben una contraseña temporal que el backend genera y entrega una sola vez en la respuesta. La cuenta queda con `credenciales_enviadas: false` hasta que el administrador la marca como enviada (RF-10). El proyecto no envía correos: la pantalla de usuarios muestra la contraseña para copiarla.
 
 ## Problemas comunes
 
@@ -139,7 +185,4 @@ Los errores llegan como `{ "mensaje": "...", "errores": { "campo": "..." } }`.
 
 ## Pendiente
 
-- Crear tickets con el formulario dinámico que arma `paquetes.campos_ticket`.
-- Asignar tickets, cambiar su estado y escribir artículos de la base de conocimiento.
-- Registrar pagos con la transacción que suspende o reactiva el paquete.
-- Inscripción a capacitaciones y registro de asistencia.
+- Enviar las credenciales por correo. Hoy el administrador las copia de la pantalla y las marca como enviadas.
